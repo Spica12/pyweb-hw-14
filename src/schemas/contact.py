@@ -13,7 +13,7 @@ class ContactSchema(BaseModel):
     notes: str
     is_favorite: bool
 
-    cmodel_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ContactCreateSchema(BaseModel):
