@@ -30,6 +30,14 @@ cloudinary.config(
     dependencies=[Depends(RateLimiter(times=3, seconds=20))],
 )
 async def get_current_user(user: UserModel = Depends(auth_service.get_current_user)):
+    """
+    The get_current_user function is a dependency that will be injected into the
+        get_current_user endpoint. It will return the user object of the currently
+        authenticated user, or None if no authentication token was provided in the request.
+
+    :param user: UserModel: Get the current user
+    :return: The current user
+    """
     return user
 
 
@@ -43,6 +51,15 @@ async def upload_avatar(
     user: UserModel = Depends(auth_service.get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    The upload_avatar function uploads a user's avatar to Cloudinary and updates the database with the new URL.
+
+    :param file: UploadFile: Get the file from the request body
+    :param user: UserModel: Get the current user from the database
+    :param db: AsyncSession: Create a database session, which is used to interact with the database
+    :param : Get the current user from the database
+    :return: A usermodel object
+    """
     public_id = f"fastcontacts/{user.username}"
     res = cloudinary.uploader.upload(file.file, public_id=public_id, overwrite=True)
     res_url = cloudinary.CloudinaryImage(public_id).build_url(
@@ -56,9 +73,15 @@ async def upload_avatar(
 
 
 @router.get("/default_avatar")
-async def send_default_avatar(
-    # user: UserModel = Depends(auth_service.get_current_user),
-):
+async def send_default_avatar():
+    """
+    The send_default_avatar function is a route that returns the default avatar image.
+
+
+    :param # user: UserModel: Get the current user from the database
+    :param : Get the current user from the database
+    :return: A fileresponse object
+    """
     return FileResponse(
         "src/static/avatar-person.svg",
         media_type="image/svg",

@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ContactSchema(BaseModel):
@@ -13,9 +13,7 @@ class ContactSchema(BaseModel):
     notes: str
     is_favorite: bool
 
-    class Config:
-        # orm_mode = True
-        from_attributes = True
+    cmodel_config = ConfigDict(from_attributes = True)
 
 
 class ContactCreateSchema(BaseModel):

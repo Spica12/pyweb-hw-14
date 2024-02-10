@@ -23,6 +23,7 @@ cloudinary = "^1.38.0"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.0"
 black = "^24.1.1"
+sphinx = "^7.2.6"
 
 [build-system]
 requires = ["poetry-core"]
