@@ -75,7 +75,7 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.notes, body.notes)
         self.assertEqual(result.is_favorite, body.is_favorite)
 
-    async def test_get_by_id(self):
+    async def test_get_by_id_found(self):
         contact = self.contact1
         mocked_contact = MagicMock()
         mocked_contact.scalar_one_or_none.return_value = contact
@@ -91,7 +91,15 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.notes, contact.notes)
         self.assertEqual(result.is_favorite, contact.is_favorite)
 
-    async def test_update(self):
+    async def test_get_by_id_not_found(self):
+        mocked_contact = MagicMock()
+        mocked_contact.scalar_one_or_none.return_value = None
+        self.session.execute.return_value = mocked_contact
+
+        result = await ContactRepo(self.session).get_by_id(contact_id=1, user=self.user)
+        self.assertIsNone(result)
+
+    async def test_update_found(self):
         body = ContactCreateSchema(
             name="test_name_1",
             surname="test_surname_1",
@@ -120,7 +128,27 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         self.session.commit.assert_called_once()
         self.session.refresh.assert_called_once()
 
-    async def test_delet(self):
+    async def test_update_not_found(self):
+        body = ContactCreateSchema(
+            name="test_name_1",
+            surname="test_surname_1",
+            email="test_email_1",
+            phone="132456789",
+            birthday=datetime(year=2001, month=5, day=7).date(),
+            notes="test_notes_1",
+            is_favorite=True,
+        )
+        mocked_contact = MagicMock()
+        mocked_contact.scalar_one_or_none.return_value = None
+        self.session.execute.return_value = mocked_contact
+
+        result = await ContactRepo(self.session).update(
+            contact_id=1, body=body, user=self.user
+        )
+
+        self.assertIsNone(result)
+
+    async def test_delet_found(self):
         mocked_contact = MagicMock()
         mocked_contact.scalar_one_or_none.return_value = self.contact2
         self.session.execute.return_value = mocked_contact
@@ -129,11 +157,18 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         self.session.commit.assert_called_once()
         self.assertIsInstance(result, ContactModel)
 
-    async def test_get_by_name(self):
+    async def test_delet_not_found(self):
+        mocked_contact = MagicMock()
+        mocked_contact.scalar_one_or_none.return_value = None
+        self.session.execute.return_value = mocked_contact
+        result = await ContactRepo(self.session).delete(contact_id=1, user=self.user)
+
+        self.assertIsNone(result)
+
+    async def test_get_by_name_found(self):
         key_name = "test_user_1"
-        contact = self.contact1
         mocked_contacts = MagicMock()
-        mocked_contacts.scalars.return_value.all.return_value = contact
+        mocked_contacts.scalars.return_value.all.return_value = self.contact1
         self.session.execute.return_value = mocked_contacts
 
         result = await ContactRepo(self.session).get_by_name(
@@ -141,19 +176,30 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIsInstance(result, ContactModel)
-        self.assertEqual(result.name, contact.name)
-        self.assertEqual(result.surname, contact.surname)
-        self.assertEqual(result.email, contact.email)
-        self.assertEqual(result.phone, contact.phone)
-        self.assertEqual(result.birthday, contact.birthday)
-        self.assertEqual(result.notes, contact.notes)
-        self.assertEqual(result.is_favorite, contact.is_favorite)
+        self.assertEqual(result.name, self.contact1.name)
+        self.assertEqual(result.surname, self.contact1.surname)
+        self.assertEqual(result.email, self.contact1.email)
+        self.assertEqual(result.phone, self.contact1.phone)
+        self.assertEqual(result.birthday, self.contact1.birthday)
+        self.assertEqual(result.notes, self.contact1.notes)
+        self.assertEqual(result.is_favorite, self.contact1.is_favorite)
 
-    async def test_get_by_surname(self):
+    async def test_get_by_name_not_found(self):
+        key_name = "test_user_1"
+        mocked_contacts = MagicMock()
+        mocked_contacts.scalars.return_value.all.return_value = None
+        self.session.execute.return_value = mocked_contacts
+
+        result = await ContactRepo(self.session).get_by_name(
+            key_name=key_name, user=self.user
+        )
+
+        self.assertIsNone(result)
+
+    async def test_get_by_surname_found(self):
         key_name = "test_surname_1"
-        contact = self.contact1
         mocked_contacts = MagicMock()
-        mocked_contacts.scalars.return_value.all.return_value = contact
+        mocked_contacts.scalars.return_value.all.return_value = self.contact1
         self.session.execute.return_value = mocked_contacts
 
         result = await ContactRepo(self.session).get_by_name(
@@ -161,19 +207,30 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIsInstance(result, ContactModel)
-        self.assertEqual(result.name, contact.name)
-        self.assertEqual(result.surname, contact.surname)
-        self.assertEqual(result.email, contact.email)
-        self.assertEqual(result.phone, contact.phone)
-        self.assertEqual(result.birthday, contact.birthday)
-        self.assertEqual(result.notes, contact.notes)
-        self.assertEqual(result.is_favorite, contact.is_favorite)
+        self.assertEqual(result.name, self.contact1.name)
+        self.assertEqual(result.surname, self.contact1.surname)
+        self.assertEqual(result.email, self.contact1.email)
+        self.assertEqual(result.phone, self.contact1.phone)
+        self.assertEqual(result.birthday, self.contact1.birthday)
+        self.assertEqual(result.notes, self.contact1.notes)
+        self.assertEqual(result.is_favorite, self.contact1.is_favorite)
 
-    async def test_get_by_email(self):
+    async def test_get_by_surname_not_found(self):
+        key_name = "test_surname_1"
+        mocked_contacts = MagicMock()
+        mocked_contacts.scalars.return_value.all.return_value = None
+        self.session.execute.return_value = mocked_contacts
+
+        result = await ContactRepo(self.session).get_by_name(
+            key_name=key_name, user=self.user
+        )
+
+        self.assertIsNone(result)
+
+    async def test_get_by_email_found(self):
         key_name = "test_email_1"
-        contact = self.contact1
         mocked_contacts = MagicMock()
-        mocked_contacts.scalars.return_value.all.return_value = contact
+        mocked_contacts.scalars.return_value.all.return_value = self.contact1
         self.session.execute.return_value = mocked_contacts
 
         result = await ContactRepo(self.session).get_by_name(
@@ -181,15 +238,27 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIsInstance(result, ContactModel)
-        self.assertEqual(result.name, contact.name)
-        self.assertEqual(result.surname, contact.surname)
-        self.assertEqual(result.email, contact.email)
-        self.assertEqual(result.phone, contact.phone)
-        self.assertEqual(result.birthday, contact.birthday)
-        self.assertEqual(result.notes, contact.notes)
-        self.assertEqual(result.is_favorite, contact.is_favorite)
+        self.assertEqual(result.name, self.contact1.name)
+        self.assertEqual(result.surname, self.contact1.surname)
+        self.assertEqual(result.email, self.contact1.email)
+        self.assertEqual(result.phone, self.contact1.phone)
+        self.assertEqual(result.birthday, self.contact1.birthday)
+        self.assertEqual(result.notes, self.contact1.notes)
+        self.assertEqual(result.is_favorite, self.contact1.is_favorite)
 
-    async def test_get_upcoming_birthday(self):
+    async def test_get_by_email_not_found(self):
+        key_name = "test_email_1"
+        mocked_contacts = MagicMock()
+        mocked_contacts.scalars.return_value.all.return_value = None
+        self.session.execute.return_value = mocked_contacts
+
+        result = await ContactRepo(self.session).get_by_name(
+            key_name=key_name, user=self.user
+        )
+
+        self.assertIsNone(result)
+
+    async def test_get_upcoming_birthday_found(self):
         limit = 10
         offset = 0
         contacts = [self.contact1, self.contact2]
@@ -200,3 +269,14 @@ class TestAsyncContact(unittest.IsolatedAsyncioTestCase):
         result = await ContactRepo(self.session).get_all(limit, offset, self.user)
 
         self.assertEqual(result, contacts)
+
+    async def test_get_upcoming_birthday_not_found(self):
+        limit = 10
+        offset = 0
+        mocked_contacts = MagicMock()
+        mocked_contacts.scalars.return_value.all.return_value = None
+        self.session.execute.return_value = mocked_contacts
+
+        result = await ContactRepo(self.session).get_all(limit, offset, self.user)
+
+        self.assertIsNone(result)
