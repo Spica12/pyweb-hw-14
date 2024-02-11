@@ -1,12 +1,12 @@
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     HTTPException,
     Path,
     Query,
-    Security,
-    BackgroundTasks,
     Request,
+    Security,
     status,
 )
 from fastapi.responses import RedirectResponse
@@ -18,6 +18,7 @@ from fastapi.security import (
 from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.conf import messages
 from src.dependencies.database import get_db
 from src.schemas.user import (
     TokenSchema,
@@ -40,7 +41,7 @@ async def signup(
     background_tasks: BackgroundTasks,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    dependencies=[Depends(RateLimiter(times=1, seconds=20))],
+    dependencies=[Depends(RateLimiter(times=1, seconds=5))],
 ):
     """
     The signup function creates a new user in the database.
@@ -59,7 +60,7 @@ async def signup(
     exist_user = await auth_service.get_user_by_username(body.username, db=db)
     if exist_user:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Account already exists"
+            status_code=status.HTTP_409_CONFLICT, detail=messages.ACCOUNT_EXIST
         )
     body.password = auth_service.get_password_hash(body.password)
     new_user = await auth_service.create_user(body, db)
@@ -74,7 +75,7 @@ async def signup(
 @router.post(
     "/login",
     response_model=TokenSchema,
-    dependencies=[Depends(RateLimiter(times=1, seconds=20))],
+    dependencies=[Depends(RateLimiter(times=1, seconds=5))],
 )
 async def login(
     body: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
@@ -91,15 +92,16 @@ async def login(
     user = await auth_service.get_user_by_username(body.username, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=messages.INVALID_USERNAME
         )
     if not user.confirmed:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not confirmed"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=messages.EMAIL_NOT_CONFIRMED,
         )
     if not auth_service.verify_password(body.password, user.password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=messages.INVALID_PASSWORD
         )
     access_token = await auth_service.create_access_token(data={"sub": user.username})
     refresh_token = await auth_service.create_refresh_token(data={"sub": user.username})
@@ -133,7 +135,8 @@ async def refresh_token(
     if refresh_token != token:
         await auth_service.update_refresh_token(user, None, db)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=messages.INVALID_REFRESH_TOKEN,
         )
 
     access_token = await auth_service.create_access_token(data={"sub": user.username})
@@ -166,7 +169,7 @@ async def confirmed_email(token: str, db: AsyncSession = Depends(get_db)):
     user = await auth_service.get_user_by_username(email, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=messages.VERIFICATION_ERROR
         )
     if user.confirmed:
         return {"message": "Your email is already confirmed"}
@@ -197,7 +200,7 @@ async def forgot_password(
     user = await auth_service.get_user_by_username(username, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email not found"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=messages.EMAIL_NOT_FOUND
         )
     background_tasks.add_task(
         email_service.send_request_to_reset_password, username, request.base_url
@@ -227,7 +230,7 @@ async def reset_password(token: str, db: AsyncSession = Depends(get_db)):
     user = await auth_service.get_user_by_username(email, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=messages.VERIFICATION_ERROR
         )
 
     return RedirectResponse(url="/api/auth/reset_password")
@@ -237,7 +240,7 @@ async def reset_password(token: str, db: AsyncSession = Depends(get_db)):
 async def reset_password(
     body: UserResetPasswordSchema,
     db: AsyncSession = Depends(get_db),
-    dependencies=[Depends(RateLimiter(times=1, seconds=20))],
+    dependencies=[Depends(RateLimiter(times=1, seconds=5))],
 ):
     """
     The reset_password function allows a user to reset their password.
@@ -255,11 +258,11 @@ async def reset_password(
     exist_user = await auth_service.get_user_by_username(body.username, db=db)
     if not exist_user:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Account not found"
+            status_code=status.HTTP_409_CONFLICT, detail=messages.ACCOUNT_NOT_FOUND
         )
     if body.password != body.confirm_password:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Password is not correct"
+            status_code=status.HTTP_409_CONFLICT, detail=messages.PASSWORD_NOT_CORRECT
         )
 
     body.password = auth_service.get_password_hash(body.password)
