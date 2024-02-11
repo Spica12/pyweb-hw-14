@@ -12,14 +12,14 @@ class UserCreateSchema(BaseModel):
 class UserReadSchema(BaseModel):
     id: uuid.UUID
     username: EmailStr
-    password: str
+    # password: str
     avatar: str | None
 
 
 class TokenSchema(BaseModel):
     access_token: str
     refresh_token: str
-    token_type: str = 'bearer'
+    token_type: str = "bearer"
 
 
 class UserResetPasswordSchema(BaseModel):
